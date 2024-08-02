@@ -1,0 +1,212 @@
+pe.test <- function(x1, x2, test = "clx", Rp = 1, Rb = 1, ncores = 1) {
+  if (test == "clx") {
+    res <- .clx.test(x1, x2)
+  } else if (test == "cq") {
+    res <- .cq.test(x1, x2)
+  } else if (test == "pecf") {
+    res <- .pecf.test(x1, x2)
+  } else if (test == "pecomp") {
+    res <- .pecomp.test(x1, x2)
+  }
+
+  if ( ncores <= 1 ) {
+    if (Rp > 1) {
+      x <- rbind(x1, x2)
+      n1 <- dim(x1)[1]
+      n <- dim(x)[1]
+      tp <- numeric(Rp)
+
+      if (test == "clx") {
+        for (i in 1:Rp) {
+          id <- sample(n, n1)
+          tp[i] <- .clx.test(x[id, ], x[-id, ])$stat
+        }
+      } else if (test == "cq") {
+        for (i in 1:Rp) {
+          id <- sample(n, n1)
+          tp[i] <- .cq.test(x[id, ], x[-id, ])$stat
+        }
+      }
+      res$perm.pvalue <- (sum(abs(tp) >= abs(res$stat)) + 1) / (Rp + 1)
+    }
+
+    if ( Rb > 1 ) {
+      n1 <- dim(x1)[1]
+      n2 <- dim(x2)[1]
+      tb <- numeric(Rb)
+
+      if (test == "clx") {
+        for (i in 1:Rb) {
+          id1 <- sample(n1, n1, replace = TRUE)
+          id2 <- sample(n2, n2, replace = TRUE)
+          tb[i] <- .clx.test(x1[id1, ], x2[id2, ])$stat
+        }
+      } else if (test == "cq") {
+        for (i in 1:Rb) {
+          id1 <- sample(n1, n1, replace = TRUE)
+          id2 <- sample(n2, n2, replace = TRUE)
+          tb[i] <- .cq.test(x1[id1, ], x2[id2, ])$stat
+        }
+      }
+      res$boot.pvalue <- (sum(abs(tb) >= abs(res$stat)) + 1) / (Rb + 1)
+    }
+
+  } else {
+    cl <- parallel::makeCluster(ncores)
+    doParallel::registerDoParallel(cl)
+
+    if ( Rp > 1 ) {
+      x <- rbind(x1, x2)
+      n1 <- dim(x1)[1]
+      n <- dim(x)[1]
+      if (test == "clx") {
+        tp <- foreach::foreach(i = 1:Rp, .combine = c, .export = ".clx.test") %dopar% {
+          id <- sample(n, n1)
+          .clx.test(x[id, ], x[-id, ])$stat
+        }
+      } else if (test == "cq") {
+        tp <- foreach::foreach(i = 1:Rp, .combine = c, .export = ".cq.test") %dopar% {
+          id <- sample(n, n1)
+          .cq.test(x[id, ], x[-id, ])$stat
+        }
+      }
+      res$perm.pvalue <- (sum(abs(tp) >= abs(res$stat)) + 1) / (Rp + 1)
+    }
+
+    if ( Rb > 1 ) {
+      n1 <- dim(x1)[1]
+      n2 <- dim(x2)[1]
+      if (test == "clx") {
+        tb <- foreach::foreach(i = 1:Rb, .combine = c, .export = c(".clx.test", "x1", "x2", "n1", "n2")) %dopar% {
+          id1 <- sample(n1, n1, replace = TRUE)
+          id2 <- sample(n2, n2, replace = TRUE)
+          .clx.test(x1[id1, ], x2[id2, ])$stat
+        }
+      } else if (test == "cq") {
+        tb <- foreach::foreach(i = 1:Rb, .combine = c, .export = c(".cq.test", "x1", "x2", "n1", "n2")) %dopar% {
+          id1 <- sample(n1, n1, replace = TRUE)
+          id2 <- sample(n2, n2, replace = TRUE)
+          .cq.test(x1[id1, ], x2[id2, ])$stat
+        }
+      }
+      res$boot.pvalue <- (sum(abs(tb) >= abs(res$stat)) + 1) / (Rb + 1)
+    }
+    parallel::stopCluster(cl)
+  }
+  res
+}
+
+
+.clx.test <- function(x1, x2) {
+  n1 <- dim(x1)[1]
+  n2 <- dim(x2)[1]
+  p <- dim(x1)[2]
+
+  m1 <- Rfast::colmeans(x1)
+  m2 <- Rfast::colmeans(x2)
+  deltaVec <- m1 - m2
+  #s <- ( (n1 - 1) * cov(x1) + (n2 - 1) * cov(x2) ) / (n1 + n2)
+  #ps <- diag(s)
+  ps <- ( (n1 - 1) * Rfast::colVars(x1) + (n2 - 1) * Rfast::colVars(x2) ) / (n1 + n2)
+  M.value <- n1 * n2 / (n1 + n2) * max( deltaVec * deltaVec / ps )
+  stat <- M.value - 2 * log(p) + log(log(p) )
+  pvalue <- 1 -  exp( -exp(-0.5 * stat) / sqrt(pi) )
+  list( stat = stat, pvalue = pvalue )
+}
+
+
+
+.cq.test <- function(x1, x2) {
+  n1 <- dim(x1)[1]  ;    n2 <- dim(x2)[1]
+  p2 <- dim(x1)[2]
+
+  XXT <- tcrossprod(x1)  ;   YYT <- tcrossprod(x2)   ;   XYT <- tcrossprod(x1, x2)
+  A.1 <- ( sum(XXT) - sum( diag(XXT) ) ) / ( n1 * (n1 - 1) )
+  B.1 <- ( sum(YYT) - sum( diag(YYT) ) ) / ( n2 * (n2 - 1) )
+  C.1 <- sum(XYT)/ ( n1 * n2 )
+  Tn <- A.1 + B.1 - 2 * C.1
+
+  xbar1 <- Rfast::colmeans(x1)    ;    xbar2 <- Rfast::colmeans(x2)
+
+  diagvec <- diag(XXT)
+  Xuu <- matrix(diagvec, n1, n1)
+  Xvv <- matrix(diagvec, n1, n1, byrow = TRUE)
+  Xxbar <- x1 %*% xbar1
+  Xub <- matrix( Xxbar, n1, n1)
+  Xvb <- matrix( Xxbar, n1, n1, byrow = TRUE)
+  mat1 <- (n1 - 1) / (n1 - 2) * XXT + 1/(n1 - 2) * Xuu - n1/(n1 - 2) * Xub
+  mat2 <- (n1 - 1) / (n1 - 2) * XXT + 1/(n1 - 2) * Xvv - n1/(n1 - 2) * Xvb
+  est <- sum(mat1 * mat2) - sum( diag(mat1) * diag( mat2) )
+  tr1 <- est / ( n1 * (n1 - 1) )
+
+  diagvec <- diag(YYT)
+  Yuu <- matrix(diagvec, n2, n2)
+  Yvv <- matrix(diagvec, n2, n2, byrow = TRUE)
+  Yybar <- x2 %*% xbar2
+  Yub <- matrix( Yybar, n2, n2)
+  Yvb <- matrix( Yybar, n2, n2, byrow = TRUE)
+  mat1 <- (n2 - 1) / (n2 - 2) * YYT + 1/(n2 - 2) * Yuu - n2/(n2 - 2) * Yub
+  mat2 <- (n2 - 1) / (n2 - 2) * YYT + 1/(n2 - 2) * Yvv - n2/(n2 - 2) * Yvb
+  est <- sum(mat1 * mat2) - sum( diag(mat1) * diag( mat2) )
+  tr2 <- est / ( n2 * (n2 - 1) )
+
+  XYu <- matrix(x1 %*% xbar2, n1, n2)
+  YXv <- matrix(x2 %*% xbar1, n1, n2, byrow = TRUE)
+  mat1 <- n2 / (n2 - 1) * XYT - n2/(n2 - 1) * XYu
+  mat2 <- n1 / (n1 - 1) * XYT - n1/(n1 - 1) * YXv
+  est <- sum(mat1 * mat2)
+  tr3 <- est / (n1 * n2)
+
+  sdn <- sqrt( 2 * tr1/(n1 * (n1 - 1) ) + 2 * tr2/( n2 * (n2 - 1) ) + 4 * tr3/(n1 * n2) )
+  stat <- Tn / sdn
+  pvalue <- 1 - pnorm(stat)
+  list( stat = stat, pvalue = pvalue )
+}
+
+
+.pecf.test <- function(x1, x2) {
+  cq <- .cq.test(x1, x2)
+  clx <- .clx.test(x1, x2)
+  cauchy.stat <- 0.5 * tan( (0.5 - cq$pval) * pi ) + 0.5 * tan( (0.5 - clx$pval) * pi )
+  cauchy.pval <- 1 - pcauchy(cauchy.stat)
+  pecauchy <- list( cauchy.stat = cauchy.stat, cauchy.pval = cauchy.pval )
+  fisher.stat <-  - 2 * log( cq$pval ) - 2 * log(clx$pval)
+  fisher.pval <- 1 - pchisq(fisher.stat, df = 4)
+  pefisher <- list( fisher.stat = fisher.stat, fisher.pval = fisher.pval )
+  list(cq = cq, clx = clx, pecauchy = pecauchy, pefisher = pefisher)
+}
+
+
+.pecomp.test <- function(x1, x2, delta = NULL) {
+  n1 <- dim(x1)[1]  ;    n2 <- dim(x2)[1]
+  p <- dim(x1)[2]
+
+  if ( is.null(delta) )  delta <- 2 * log( log(n1 + n2) ) * log(p)
+
+  xbar <- Rfast::colmeans(x1)
+  x2bar <- Rfast::colmeans(x1^2)
+  ybar <- Rfast::colmeans(x2)
+  y2bar <- Rfast::colmeans(x2^2)
+
+  Ak <- n1 * n1 * xbar * xbar - n1 * x2bar
+  Bk <- n2 * n2 * ybar * ybar - n2 * y2bar
+  Ck <- n1 * n2 * xbar*ybar
+  Tk <- Ak / ( n1 * (n1 - 1) ) + Bk / (n2 * (n2 - 1) ) - 2 * Ck/(n1 * n2)
+
+  sig1 <- (n1 * x2bar - n1 * xbar^2) / (n1 - 1)
+  sig2 <- (n2 * y2bar - n2 * ybar^2) / (n2 - 1)
+  sigk <- 2 * sig1^2 / ( n1 * (n1 - 1 ) ) + 2 * sig2^2 / ( n2 * (n2 - 1) ) + 4 * sig1 * sig2 / ( n1 * n2 )
+  sdk <- sqrt(sigk)
+
+  stat_normalized <- Tk / sdk
+  idx <- sqrt(2) * stat_normalized + 1 > delta
+  J0 <- sqrt(p) * sum( stat_normalized[idx] )
+
+  stat_CQ <- .cq.test(x1, x2)$stat
+  stat <- stat_CQ + J0
+  pvalue <- 1 - pnorm(stat)
+
+  list(stat = stat, pvalue = pvalue)
+}
+
+

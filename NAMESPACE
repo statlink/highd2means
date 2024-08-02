@@ -1,0 +1,11 @@
+#useDynLib(fsn, .registration = TRUE)
+
+importFrom("Rfast", colmeans, colsums, colVars)
+importFrom("stats", cov, cov2cor, dnorm, pcauchy, pchisq, pnorm)
+
+import("doParallel")
+import("parallel")
+import("foreach")
+
+exportPattern("^[[:alpha:]]+")
+exportPattern("^[^\\.]")
