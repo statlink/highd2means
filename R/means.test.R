@@ -258,7 +258,7 @@ means.test <- function(x1, x2, test = "baisara", cov.equal = TRUE, Rp = 1, Rb = 
   if ( cov.equal ) {
     diag.sig <- ( (n1-1) * Rfast::colVars(x1) + (n2 - 1) * Rfast::colVars(x2) ) / ( n1 + n2 - 2 )
     diag.sig[diag.sig <= 10^(-10)] <- 10^(-10)
-    T_orig <- ( Rfast::colmeans(x1) - Rfast::colmeans(x2) )^2 / ( (1/n1 + 1/n2) * diag.sig )
+    Torig <- ( Rfast::colmeans(x1) - Rfast::colmeans(x2) )^2 / ( (1/n1 + 1/n2) * diag.sig )
 
   } else {
     diag1 <- Rfast::colVars(x1)
