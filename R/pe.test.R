@@ -102,13 +102,11 @@ pe.test <- function(x1, x2, test = "clx", Rp = 1, Rb = 1, ncores = 1) {
   n2 <- dim(x2)[1]
   p <- dim(x1)[2]
 
-  m1 <- Rfast::colmeans(x1)
-  m2 <- Rfast::colmeans(x2)
-  deltaVec <- m1 - m2
+  deltavec <- Rfast::colmeans(x1) - Rfast::colmeans(x2)
   #s <- ( (n1 - 1) * cov(x1) + (n2 - 1) * cov(x2) ) / (n1 + n2)
   #ps <- diag(s)
   ps <- ( (n1 - 1) * Rfast::colVars(x1) + (n2 - 1) * Rfast::colVars(x2) ) / (n1 + n2)
-  M.value <- n1 * n2 / (n1 + n2) * max( deltaVec * deltaVec / ps )
+  M.value <- n1 * n2 / (n1 + n2) * max( deltaVec^2 / ps )
   stat <- M.value - 2 * log(p) + log(log(p) )
   pvalue <- 1 -  exp( -exp(-0.5 * stat) / sqrt(pi) )
   list( stat = stat, pvalue = pvalue )
@@ -202,8 +200,8 @@ pe.test <- function(x1, x2, test = "clx", Rp = 1, Rb = 1, ncores = 1) {
   idx <- sqrt(2) * stat_normalized + 1 > delta
   J0 <- sqrt(p) * sum( stat_normalized[idx] )
 
-  stat_CQ <- .cq.test(x1, x2)$stat
-  stat <- stat_CQ + J0
+  cqstat <- .cq.test(x1, x2)$stat
+  stat <- cqstat + J0
   pvalue <- 1 - pnorm(stat)
 
   list(stat = stat, pvalue = pvalue)
