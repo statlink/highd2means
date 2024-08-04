@@ -97,6 +97,8 @@ pe.test <- function(x1, x2, test = "clx", Rp = 1, Rb = 1, ncores = 1) {
 }
 
 
+## Modified codes taken from the PEtests package
+
 .clx.test <- function(x1, x2) {
   n1 <- dim(x1)[1]
   n2 <- dim(x2)[1]

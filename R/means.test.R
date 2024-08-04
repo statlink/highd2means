@@ -199,7 +199,7 @@ means.test <- function(x1, x2, test = "baisara", cov.equal = TRUE, Rp = 1, Rb = 
 
 
 
-
+## Modified codes taken from the highmean package
 
 .baisara <- function(x1, x2) {
   n1 <- dim(x1)[1]
@@ -282,31 +282,6 @@ means.test <- function(x1, x2, test = "baisara", cov.equal = TRUE, Rp = 1, Rb = 
 }
 
 
-
-
-.skk <- function(x1, x2) {
-  n1 <- dim(x1)[1]
-  n2 <- dim(x2)[1]
-  p <- dim(x1)[2]
-  n <- n1 + n2 - 2
-  x1.bar <- Rfast::colmeans(x1)
-  x2.bar <- Rfast::colmeans(x2)
-  S1 <- cov(x1)    ;   S2 <- cov(x2)
-  s1 <- diag(S1)   ;   s2 <- diag(S2)
-  D1 <- diag(s1)   ;   D2 <- diag(s2)
-  D12 <- D1 / n1 + D2 / n2
-  diagD <- diag(D12)
-  a <- ( S1 / n1 + S2 / n2 ) / sqrt( diagD )
-  R <- t(a) / sqrt( diagD )
-  trR <- sum(R^2)
-  c.p.n <- 1 + trR / p ^ (3 / 2)
-  var.qn <- 2 * trR / p - 2 * sum( s1 / diagD ) ^ 2 / p / n1 /
-    (n1 + 1) ^ 2 - 2 * sum( s2 / diagD ) ^ 2 / p / n2 / (n2 + 1) ^ 2
-  denom <- sqrt(p * c.p.n * var.qn)
-  TSvalue <- ( sum( (x1.bar - x2.bar)^2 / diagD ) - p ) / denom
-  pvalue <- 2 * (1 - pnorm( abs(TSvalue) ) )
-  list(stat = TSvalue, pvalue = pvalue)
-}
 
 
 
@@ -459,3 +434,29 @@ means.test <- function(x1, x2, test = "baisara", cov.equal = TRUE, Rp = 1, Rb = 
   list( stat = stat, pvalue = pvalue )
 }
 
+
+## modified function taken from the highDmean pakage
+
+.skk <- function(x1, x2) {
+  n1 <- dim(x1)[1]
+  n2 <- dim(x2)[1]
+  p <- dim(x1)[2]
+  n <- n1 + n2 - 2
+  x1.bar <- Rfast::colmeans(x1)
+  x2.bar <- Rfast::colmeans(x2)
+  S1 <- cov(x1)    ;   S2 <- cov(x2)
+  s1 <- diag(S1)   ;   s2 <- diag(S2)
+  D1 <- diag(s1)   ;   D2 <- diag(s2)
+  D12 <- D1 / n1 + D2 / n2
+  diagD <- diag(D12)
+  a <- ( S1 / n1 + S2 / n2 ) / sqrt( diagD )
+  R <- t(a) / sqrt( diagD )
+  trR <- sum(R^2)
+  c.p.n <- 1 + trR / p ^ (3 / 2)
+  var.qn <- 2 * trR / p - 2 * sum( s1 / diagD ) ^ 2 / p / n1 /
+    (n1 + 1) ^ 2 - 2 * sum( s2 / diagD ) ^ 2 / p / n2 / (n2 + 1) ^ 2
+  denom <- sqrt(p * c.p.n * var.qn)
+  TSvalue <- ( sum( (x1.bar - x2.bar)^2 / diagD ) - p ) / denom
+  pvalue <- 2 * (1 - pnorm( abs(TSvalue) ) )
+  list(stat = TSvalue, pvalue = pvalue)
+}
