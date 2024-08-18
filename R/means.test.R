@@ -194,7 +194,10 @@ means.test <- function(x1, x2, test = "baisara", cov.equal = TRUE, Rp = 1, Rb = 
 
 
 
-
+.co <- function(x) {
+  m <- Rfast::colmeans(x)
+  tcrossprod(t(x) - m) / (dim(x)[1] - 1)
+}
 
 
 
@@ -209,7 +212,7 @@ means.test <- function(x1, x2, test = "baisara", cov.equal = TRUE, Rp = 1, Rb = 
   p <- dim(x1)[2]
   diff <- Rfast::colmeans(x1) - Rfast::colmeans(x2)
   XX <- sum(diff^2)
-  pcov <- ( (n1 - 1) * cov(x1) + (n2 - 1) * cov(x2) ) / n
+  pcov <- ( (n1 - 1) * .co(x1) + (n2 - 1) * .co(x2) ) / n
   trS <- sum( diag(pcov) )
   tr.cov2 <- n^2/ ( (n + 2) * (n - 1) ) * ( sum(pcov^2) - trS^2/n )
   stat <- (tau * XX - trS) / sqrt( 2 * (n + 1)/n * tr.cov2 )
@@ -291,7 +294,7 @@ means.test <- function(x1, x2, test = "baisara", cov.equal = TRUE, Rp = 1, Rb = 
   tau <- n1 * n2 / (n1 + n2)
   n <- n1 + n2 - 2
   p <- dim(x1)[2]
-  sam.cov <- ( (n1 - 1) * cov(x1) + (n2 - 1) * cov(x2) ) / n
+  sam.cov <- ( (n1 - 1) * .co(x1) + (n2 - 1) * .co(x2) ) / n
   sam.corr <- cov2cor(sam.cov)
   trR2 <- sum(sam.corr^2)
   ca <- 1 + trR2/p^1.5
@@ -319,7 +322,7 @@ means.test <- function(x1, x2, test = "baisara", cov.equal = TRUE, Rp = 1, Rb = 
 
   if ( cov.equal ) {
     n <- n1 + n2 - 2
-    sam.cov <- ( (n1 - 1) * cov(x1) + (n2 - 1) * cov(x2) ) / n
+    sam.cov <- ( (n1 - 1) * .co(x1) + (n2 - 1) * .co(x2) ) / n
     trS <- sum( diag(sam.cov) )
     tr.cov2 <- n^2/((n + 2)*(n - 1))*(sum(sam.cov^2) - trS^2/n)
     stat <- TP/sqrt( (2/(n1*(n1 - 1)) + 2/(n2*(n2 - 1)) + 4/(n1*n2))*tr.cov2 )
@@ -381,10 +384,10 @@ means.test <- function(x1, x2, test = "baisara", cov.equal = TRUE, Rp = 1, Rb = 
 
   if ( cov.equal ) {
     n <- n1 + n2 - 2
-    sam.cov <- ( (n1 - 1) * cov(x1) + (n2 - 1) * cov(x2) ) / n
+    sam.cov <- ( (n1 - 1) * .co(x1) + (n2 - 1) * .co(x2) ) / n
     trS <- sum( diag(sam.cov) )
-    tr.cov2 <- n^2/((n + 2)*(n - 1))*(sum(sam.cov^2) - trS^2/n)
-    stat <- TP/sqrt( (2/(n1*(n1 - 1)) + 2/(n2*(n2 - 1)) + 4/(n1*n2))*tr.cov2 )
+    tr.cov2 <- n^2/((n + 2) * (n - 1)) * ( sum(sam.cov^2) - trS^2/n )
+    stat <- TP/sqrt( ( 2/(n1*(n1 - 1) ) + 2/( n2*(n2 - 1) ) + 4/(n1*n2) ) * tr.cov2 )
 
   } else {
     s1 <- Rfast::colsums(x1)
@@ -444,7 +447,7 @@ means.test <- function(x1, x2, test = "baisara", cov.equal = TRUE, Rp = 1, Rb = 
   n <- n1 + n2 - 2
   x1.bar <- Rfast::colmeans(x1)
   x2.bar <- Rfast::colmeans(x2)
-  S1 <- cov(x1)    ;   S2 <- cov(x2)
+  S1 <- .co(x1)    ;   S2 <- .co(x2)
   s1 <- diag(S1)   ;   s2 <- diag(S2)
   D1 <- diag(s1)   ;   D2 <- diag(s2)
   D12 <- D1 / n1 + D2 / n2
